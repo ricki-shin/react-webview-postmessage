@@ -4,10 +4,221 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Vite + React</title>
+    <title>Workout</title>
+    <style>
+      .container {
+          display: flex;
+          flex-direction: column;
+          gap: 0.7rem;
+      }
+      .flex-box {
+          display: flex;
+          gap: 1rem;
+      }
+      .column-box {
+          display: flex;
+          flex-direction: column;
+      }
+      .graph-box {
+          position: relative;
+          width: 300px;
+          height: 260px;
+          border: 1px solid black;
+      }
+      .title {
+          font-size: 1rem;
+      }
+      .div-line {
+          width: 100%;
+          height: 1px;
+          background-color: black;
+          margin-top: 0.5rem;
+      }
+      .dot {
+          position: absolute;
+          width: 1px;
+          height: 1px;
+          background-color: red;
+          border-radius: 50%;
+      }
+  </style>
+
   </head>
   <body>
     <div id="root"></div>
-    <script type="module" src="/src/main.jsx"></script>
+    <!-- <script type="module" src="/src/main.jsx"></script> -->
+    <script>
+      let allDevices = null; // 스캔된 모든 기기 목록
+      let connectedDevice = null; // 연결된 모든 기기 목록
+      let targetPower; // 파워 수치
+      let power; // 파워 수치
+      let speedCadence; // 스피드와 케이던스 수치
+      let heartRate; // 심박 수치
+      let heartRateList = []; // 심박수 그래프 표시할 배열
+
+      const handleChange = (event) => {
+          // Implement your logic here if needed
+      };
+
+      const createDot = (x, y) => {
+          const dot = document.createElement('div');
+          dot.className = 'dot';
+          dot.style.left = x + 'px';
+          dot.style.bottom = y + 'px';
+          return dot;
+      };
+
+      // RN에서 들어오는 데이터를 타입에 맞게 변수에 저장
+      const handleMessage = (e) => {
+          const data = JSON.parse(e.data);
+
+          if (data.type === 'allDevices') { // 스캔된 모든 기기 목록
+              allDevices = data.data;
+              renderApp();
+          }
+
+          if (data.type === 'connectedDevice') { // 연결된 모든 기기 목록
+              connectedDevice = data.data;
+              renderApp();
+          }
+
+          if (data.type === 'targetPower') { // 타겟 파워
+              console.log('incoming targetPower from RN');
+              targetPower = data.data;
+              renderApp();
+          }
+
+          if (data.type === 'cyclingPower') { // 파워 수치
+              console.log('incoming power from RN');
+              power = data.data;
+              renderApp();
+          }
+
+          if (data.type === 'cyclingSpeedAndCadence') { // 스피드와 케이던스 수치
+              console.log('incoming speedCadence from RN');
+              speedCadence = data.data;
+              renderApp();
+          }
+
+          if (data.type === 'heartRate') { // 심박 수치
+              heartRate = data.data;
+              window.ReactNativeWebView.postMessage(
+                JSON.stringify({ type: data.type, data: data.data })
+                // 심박수 수치를 변형시킨후 RN에 전달
+                  // JSON.stringify({ type: data.type, data: data.data * 2 })
+              );
+              // 심박수 그래프 표시할 배열에 저장
+              heartRateList.push(data.data.heartRate);
+              if (heartRateList.length > 300) { // 배열길이가 300이상이면 가장 처음값을 제거
+                  heartRateList.shift();
+              }
+              renderApp();
+          }
+      };
+
+      // ios (RN 과 통신하는 리스너)
+      window.addEventListener('message', handleMessage);
+
+      // android (RN 과 통신하는 리스너)
+      document.addEventListener('message', handleMessage);
+
+      // 기기 연결/해제 클릭 할때 실행되는 함수
+      const hanldeClickWebToApp = (type, data) => {
+          const message = type === 'connect' 
+            ? { type: type, data: data }  // 기기와 연결 클릭시 기기정보를 보냄
+            : { type: type, id: data.id }; // 기기와 연결해제 클릭시 기기 아이디만 보냄
+          window.ReactNativeWebView.postMessage( // RN 에 전달
+              JSON.stringify(message)
+          );
+      };
+
+
+      // 렌더링 코드
+      const renderApp = () => {
+          const root = document.getElementById('root');
+          root.innerHTML = '';
+
+          const container = document.createElement('div'); // div 생성
+          container.className = 'container'; // 스타일 적용
+
+          const createDeviceList = (devices, title) => { // 기기 목록을 표시하는 함수
+              const section = document.createElement('div'); // div 생성
+              const sectionTitle = document.createElement('h1'); // h1 생성 
+              sectionTitle.className = 'title'; // 제목 텍스트에 스타일 적용
+              sectionTitle.innerText = title; // h1 태그에 텍스트 적용
+              section.appendChild(sectionTitle); // 목록을 감싸는 div 안에 제목 표시
+
+              devices.forEach((el, i) => { // 기기 목록 조회
+                  const flexBox = document.createElement('div'); 
+                  flexBox.className = 'flex-box'; 
+
+                  const columnBox = document.createElement('div');
+                  columnBox.className = 'column-box';
+
+                  const idDiv = document.createElement('div'); // 기기 ID 를 표시할 div 생성
+                  idDiv.innerText = el.id;
+                  columnBox.appendChild(idDiv);
+
+                  const nameDiv = document.createElement('div'); // 기기 이름을 표시할 div 생성
+                  nameDiv.innerText = el.name;
+                  columnBox.appendChild(nameDiv);
+
+                  flexBox.appendChild(columnBox); // 기기 ID 와 이름을 감싼 columnBox div를 flexBox div에 추가
+
+                  const button = document.createElement('button');
+                  button.innerText = (title === '스캔된 장치 리스트') ? '연결' : '해제';
+                  button.onclick = () => hanldeClickWebToApp((title === '스캔된 장치 리스트') ? 'connect' : 'disconnect', el);
+                  flexBox.appendChild(button); // 버튼 태그를 flexBox div에 추가
+
+                  section.appendChild(flexBox);
+              });
+
+              return section;
+          };
+
+          if (allDevices) { // 스캔된 기기가 있다면
+              container.appendChild(createDeviceList(allDevices, '스캔된 장치 리스트')); 
+          }
+
+          if (connectedDevice) { // 연결된 기기 목록이 있다면
+              container.appendChild(createDeviceList(connectedDevice, '연결된 장치'));
+          }
+
+          const createDataDisplay = (label, data) => {
+              const dataDiv = document.createElement('h3');
+              dataDiv.innerText = `${label}: ${data ? data : '0'}`;
+              return dataDiv;
+          };
+
+          container.appendChild(createDataDisplay('heart rate', heartRate ? heartRate.heartRate : null));
+          container.appendChild(createDataDisplay('speed', speedCadence ? speedCadence.speed : null));
+          container.appendChild(createDataDisplay('cadence', speedCadence ? speedCadence.cadence : null));
+          container.appendChild(createDataDisplay('power', power ? power.power : null));
+          container.appendChild(createDataDisplay('target power', targetPower ? targetPower : null));
+          
+          // 심박수를 그래프로 표시
+          if (heartRateList.length > 0) {
+
+              const heartRateHeading = document.createElement('h3');
+              // heartRateHeading.innerText = `heart rate graph: ${heartRateList.join(', ')}`;
+              container.appendChild(heartRateHeading);
+
+              const graphBox = document.createElement('div');
+              graphBox.className = 'graph-box';
+              container.appendChild(graphBox);
+
+              heartRateList.forEach((heartRate, idx) => {
+                  const dot = createDot(idx, heartRate);
+                  graphBox.appendChild(dot);
+              });
+          }
+          
+          root.appendChild(container);
+      };
+
+      document.addEventListener('DOMContentLoaded', function() {
+          renderApp();
+      });
+  </script>
   </body>
 </html>

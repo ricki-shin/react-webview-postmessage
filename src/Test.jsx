@@ -4,8 +4,21 @@ import styled from 'styled-components';
 const Test = () => {
   const [allDevices, setAllDevices] = useState(null);
   const [connectedDevice, setConnectedDevice] = useState(null);
-  const [bleData, setBleData] = useState(null);
+  const [targetPower, setTargetPower] = useState();
+  const [power, setPower] = useState();
+  const [speedCadence, setSpeedCadence] = useState();
+  const [heartRate, setHeartRate] = useState();
   const [heartRateList, setHeartRateList] = useState([]);
+
+  const [target, setTarget] = useState('');
+
+  const handleChange = (event) => {
+    // setTarget(event.target.value);
+    // console.log('타겟 값: ', value)
+    // window.ReactNativeWebView.postMessage(
+    //   JSON.stringify({ type: 'target', data: event.target.value })
+    // );
+  };
 
   const startingPointX = 0;
   const Dot = ({ x, y }) => {
@@ -25,7 +38,6 @@ const Test = () => {
     };
     return <div style={style}></div>;
   };
-
   //RN 으로부터 넘어오는 데이터 처리 로직
   useEffect(() => {
     const handleMessage = (e) => {
@@ -39,22 +51,31 @@ const Test = () => {
         setConnectedDevice(data.data);
       }
 
-      if (data.type === 'bleData') {
-        console.log('incoming bleData from RN');
-        setBleData(data.data);
+      // if (data.type === 'targetPower') {
+      //   console.log('incoming targetPower from RN');
+      //   setTargetPower(data.data);
+      // }
+      if (data.type === 'cyclingPower') {
+        console.log('incoming power from RN');
+        setPower(data.data);
+      }
+      if (data.type === 'cyclingSpeedAndCadence') {
+        console.log('incoming speedCadence from RN');
+        setSpeedCadence(data.data);
       }
       if (data.type === 'heartRate') {
-        setBleData(data.data);
+        setHeartRate(data.data)
+        console.log('심박수: ',data.data)
         // WebView 에서 RN으로 데이터 수정해서 보냄
         window.ReactNativeWebView.postMessage(
           JSON.stringify({ type: data.type, data: data.data * 2 })
         );
         setHeartRateList((prevState) => {
           if (prevState.length > 300) {
-            const updatedList = [...prevState.slice(1), data.data];
+            const updatedList = [...prevState.slice(1), data.data.heartRate];
             return updatedList;
           } else {
-            return [...prevState, data.data];
+            return [...prevState, data.data.heartRate];
           }
         });
       }
@@ -119,17 +140,33 @@ const Test = () => {
             </FlexBox>
           </>
         ))}
+        <div>
 
-      {bleData && <h3>bleData : {bleData}</h3>}
-      {bleData && <h3>speedCadence : {bleData.speedCadence}</h3>}
-      {bleData && <h3>power : {bleData.power}</h3>}
-      {/* {bleData && <h3>heart rate : {bleData}</h3>}
-      {bleData && <h3>heart rate list : {heartRateList}</h3>}
-      <GraphBox>
-        {heartRateList.map((heartRate, idx) => (
-          <Dot key={idx} x={startingPointX + idx} y={heartRate} />
-        ))}
-      </GraphBox> */}
+        <h3>heart rate : {heartRate && heartRate.heartRate} </h3>
+        <h3>speed : {speedCadence && speedCadence.speed} </h3>
+        <h3>cadence : {speedCadence && speedCadence.cadence} </h3>
+        <h3>power : {power && power.power} </h3>
+      </div>
+      {/* <h3>power : {power && power.instantaneousPower} </h3> */}
+      {/* <div>
+        <label>
+          Enter a target:
+          <input
+            type="number"
+            // value={target}
+            value={targetPower}
+            onChange={handleChange}
+          />
+        </label>
+      </div> */}
+      
+      {heartRateList.length > 0  && 
+        <GraphBox>
+          {heartRateList.map((heartRate, idx) => (
+            <Dot key={idx} x={startingPointX + idx} y={heartRate} />
+          ))}
+        </GraphBox>
+      }
     </Wrapper>
   );
 };
@@ -158,7 +195,7 @@ const GraphBox = styled.div`
   border: '1px solid black';
 `;
 
-const Title = styled.h1`
+const Title = styled.h1`l
   font-size: 1rem;
 `;
 
