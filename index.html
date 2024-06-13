@@ -60,6 +60,7 @@
           // Implement your logic here if needed
       };
 
+      // 심박수 그래프 표시할 빨간점 생성
       const createDot = (x, y) => {
           const dot = document.createElement('div');
           dot.className = 'dot';
@@ -102,12 +103,13 @@
 
           if (data.type === 'heartRate') { // 심박 수치
               heartRate = data.data;
+              // RN에 심박 데이터 전달
               window.ReactNativeWebView.postMessage(
-                JSON.stringify({ type: data.type, data: data.data })
-                // 심박수 수치를 변형시킨후 RN에 전달
+                JSON.stringify(data)
+                // 심박수 수치를 2배로 바꾼후 RN에 전달
                   // JSON.stringify({ type: data.type, data: data.data * 2 })
               );
-              // 심박수 그래프 표시할 배열에 저장
+              // 심박수 그래프에 표시할 배열에 심박 수치 저장
               heartRateList.push(data.data.heartRate);
               if (heartRateList.length > 300) { // 배열길이가 300이상이면 가장 처음값을 제거
                   heartRateList.shift();
@@ -116,43 +118,43 @@
           }
       };
 
-      // ios (RN 과 통신하는 리스너)
+      // ios (RN 에서 들어오는 데이터 수신하는 리스너)
       window.addEventListener('message', handleMessage);
 
-      // android (RN 과 통신하는 리스너)
+      // android (RN 에서 들어오는 데이터 수신하는 리스너)
       document.addEventListener('message', handleMessage);
 
-      // 기기 연결/해제 클릭 할때 실행되는 함수
+      // 기기 연결/해제 할때 실행되는 함수
       const hanldeClickWebToApp = (type, data) => {
           const message = type === 'connect' 
-            ? { type: type, data: data }  // 기기와 연결 클릭시 기기정보를 보냄
-            : { type: type, id: data.id }; // 기기와 연결해제 클릭시 기기 아이디만 보냄
+            ? { type: type, data: data }  // 기기와 연결시 기기정보를 RN에 보냄
+            : { type: type, id: data.id }; // 기기와 연결해제시 기기 아이디만 RN에 보냄
           window.ReactNativeWebView.postMessage( // RN 에 전달
               JSON.stringify(message)
           );
       };
 
 
-      // 렌더링 코드
+      // 데이터 렌더링 코드
       const renderApp = () => {
           const root = document.getElementById('root');
           root.innerHTML = '';
 
-          const container = document.createElement('div'); // div 생성
+          const container = document.createElement('div'); // 스캔된기기나 연결된 기기 목록, 데이터표시할 div 생성
           container.className = 'container'; // 스타일 적용
 
           const createDeviceList = (devices, title) => { // 기기 목록을 표시하는 함수
-              const section = document.createElement('div'); // div 생성
-              const sectionTitle = document.createElement('h1'); // h1 생성 
-              sectionTitle.className = 'title'; // 제목 텍스트에 스타일 적용
+              const section = document.createElement('div'); // 기기 목록을 감싸는 div 생성
+              const sectionTitle = document.createElement('h1'); // 제목에 쓰일 h1 생성 
+              sectionTitle.className = 'title'; // 제목 태그에 스타일 적용
               sectionTitle.innerText = title; // h1 태그에 텍스트 적용
               section.appendChild(sectionTitle); // 목록을 감싸는 div 안에 제목 표시
 
               devices.forEach((el, i) => { // 기기 목록 조회
-                  const flexBox = document.createElement('div'); 
+                  const flexBox = document.createElement('div'); // 스캔된 기기 정보와 연결/해제 버튼을 표시할 div 생성
                   flexBox.className = 'flex-box'; 
 
-                  const columnBox = document.createElement('div');
+                  const columnBox = document.createElement('div'); // 스캔된기기 ID와 이름을 표시할 div 생성
                   columnBox.className = 'column-box';
 
                   const idDiv = document.createElement('div'); // 기기 ID 를 표시할 div 생성
@@ -165,12 +167,12 @@
 
                   flexBox.appendChild(columnBox); // 기기 ID 와 이름을 감싼 columnBox div를 flexBox div에 추가
 
-                  const button = document.createElement('button');
-                  button.innerText = (title === '스캔된 장치 리스트') ? '연결' : '해제';
-                  button.onclick = () => hanldeClickWebToApp((title === '스캔된 장치 리스트') ? 'connect' : 'disconnect', el);
+                  const button = document.createElement('button'); // 연결/해제 표시할 버튼 생성
+                  button.innerText = (title === '스캔된 장치 리스트') ? '연결' : '해제'; // 스캔된 기기면 connect 버튼, 이미 연결된 기기면 disconnect 버튼표시
+                  button.onclick = () => hanldeClickWebToApp((title === '스캔된 장치 리스트') ? 'connect' : 'disconnect', el); // 버튼 누를때 기기 연결 상태에 따라 함수실행
                   flexBox.appendChild(button); // 버튼 태그를 flexBox div에 추가
 
-                  section.appendChild(flexBox);
+                  section.appendChild(flexBox); // 기기정보와 버튼을 표시한 div를 section div에 붙여 표시합니다.
               });
 
               return section;
@@ -184,12 +186,14 @@
               container.appendChild(createDeviceList(connectedDevice, '연결된 장치'));
           }
 
+        // 데이터 표시함수
           const createDataDisplay = (label, data) => {
               const dataDiv = document.createElement('h3');
               dataDiv.innerText = `${label}: ${data ? data : '0'}`;
               return dataDiv;
           };
 
+          // RN에서 새로운 데이터를 보낼때마다 데이터값 갱신
           container.appendChild(createDataDisplay('heart rate', heartRate ? heartRate.heartRate : null));
           container.appendChild(createDataDisplay('speed', speedCadence ? speedCadence.speed : null));
           container.appendChild(createDataDisplay('cadence', speedCadence ? speedCadence.cadence : null));
@@ -199,18 +203,18 @@
           // 심박수를 그래프로 표시
           if (heartRateList.length > 0) {
 
-              const heartRateHeading = document.createElement('h3');
-              // heartRateHeading.innerText = `heart rate graph: ${heartRateList.join(', ')}`;
-              container.appendChild(heartRateHeading);
+            const heartRateHeading = document.createElement('h3'); 
+            container.appendChild(heartRateHeading);
+            
+            const graphBox = document.createElement('div'); // 심박수 그래프 표시할 박스 생성 (300픽셀까지 표시가능)
+            graphBox.className = 'graph-box';
+            container.appendChild(graphBox);
 
-              const graphBox = document.createElement('div');
-              graphBox.className = 'graph-box';
-              container.appendChild(graphBox);
-
-              heartRateList.forEach((heartRate, idx) => {
-                  const dot = createDot(idx, heartRate);
-                  graphBox.appendChild(dot);
-              });
+            // 배열에 저장된 심박 수치마다 빨간점 표시
+            heartRateList.forEach((heartRate, idx) => {
+                const dot = createDot(idx, heartRate); // div 생성하여 빨간색 점 스타일적용
+                graphBox.appendChild(dot); // 그래프 div에 붙이기
+            });
           }
           
           root.appendChild(container);
