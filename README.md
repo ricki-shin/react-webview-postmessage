@@ -1,8 +1,14 @@
-# React + Vite
+# 웹뷰 프로그램
+   
+## 프로그램 설명
+Ble 프로그램에서 넘어오는 데이터를 받아서 화면에 보여줍니다. (index.html 파일)
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+## 설치
+```bash
+yarn install
+```
 
-Currently, two official plugins are available:
-
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react/README.md) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## 실행
+```bash
+yarn run dev
+```
